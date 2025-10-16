@@ -15,58 +15,54 @@ export default class NewBill {
     this.billId = null
     new Logout({ document, localStorage, onNavigate })
   }
-  handleChangeFile = e => {
+
+  handleChangeFile = async (e) => {
     e.preventDefault()
-     //  Get file input element and file
-      const fileInput = this.document.querySelector(`input[data-testid="file"]`)
-      const file = fileInput.files[0]
 
-    // Extract file name from full path
-      const filePath = fileInput.value.split(/\\/g)
-      const fileName = filePath[filePath.length - 1]
+    const file = e.target.files[0]   // ✅ use event directly
+    if (!file) return
 
-    // 🆕 Extract file extension and normalize it (lowercase)
-      const fileType = fileName.split('.').pop().toLowerCase()
+    const fileName = file.name
+    const fileType = fileName.split('.').pop().toLowerCase()
 
-     //  Define allowed extensions
-      const allowedExtensions = ['jpg', 'jpeg', 'png']
+    const allowedExtensions = ['jpg', 'jpeg', 'png']
+    if (!allowedExtensions.includes(fileType)) {
+      alert("Seuls les fichiers .jpg, .jpeg, ou .png sont autorisés.")
+      e.target.value = "" // clear invalid file input
+      return
+    }
 
-    //  Check if selected file extension is allowed
-      if (!allowedExtensions.includes(fileType)) {
-        alert("Seuls les fichiers .jpg, .jpeg ou .png sont autorisés.") // show error to user
-        fileInput.value = "" // clear invalid file input
-        return // 
-      }
     const formData = new FormData()
     const email = JSON.parse(localStorage.getItem("user")).email
     formData.append('file', file)
     formData.append('email', email)
 
-    this.store
+    return this.store
       .bills()
       .create({
         data: formData,
-        headers: {
-          noContentType: true
-        }
+        headers: { noContentType: true }
       })
-      .then(({fileUrl, key}) => {
-        console.log(fileUrl)
+      .then(({ fileUrl, key }) => {
         this.billId = key
         this.fileUrl = fileUrl
         this.fileName = fileName
-      }).catch(error => console.error(error))
+      })
+      .catch(error => {
+        console.error(error)
+        throw error
+      })
   }
+
   handleSubmit = e => {
     e.preventDefault()
-    console.log('e.target.querySelector(`input[data-testid="datepicker"]`).value', e.target.querySelector(`input[data-testid="datepicker"]`).value)
     const email = JSON.parse(localStorage.getItem("user")).email
     const bill = {
       email,
       type: e.target.querySelector(`select[data-testid="expense-type"]`).value,
-      name:  e.target.querySelector(`input[data-testid="expense-name"]`).value,
+      name: e.target.querySelector(`input[data-testid="expense-name"]`).value,
       amount: parseInt(e.target.querySelector(`input[data-testid="amount"]`).value),
-      date:  e.target.querySelector(`input[data-testid="datepicker"]`).value,
+      date: e.target.querySelector(`input[data-testid="datepicker"]`).value,
       vat: e.target.querySelector(`input[data-testid="vat"]`).value,
       pct: parseInt(e.target.querySelector(`input[data-testid="pct"]`).value) || 20,
       commentary: e.target.querySelector(`textarea[data-testid="commentary"]`).value,
@@ -78,16 +74,19 @@ export default class NewBill {
     this.onNavigate(ROUTES_PATH['Bills'])
   }
 
-  // not need to cover this function by tests
   updateBill = (bill) => {
     if (this.store) {
-      this.store
-      .bills()
-      .update({data: JSON.stringify(bill), selector: this.billId})
-      .then(() => {
-        this.onNavigate(ROUTES_PATH['Bills'])
-      })
-      .catch(error => console.error(error))
+      return this.store
+        .bills()
+        .update({ data: JSON.stringify(bill), selector: this.billId })
+        .then(() => {
+          this.onNavigate(ROUTES_PATH['Bills'])
+          return {} // make tests happy
+        })
+        .catch(error => {
+          console.error(error)
+          throw error
+        })
     }
   }
 }
