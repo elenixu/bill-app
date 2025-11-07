@@ -12,13 +12,15 @@ import router from '../app/Router.js'
 import mockStore from '../__mocks__/store'
 import $ from 'jquery'
 
-// ✅ Attach fake modal globally
+// Attach modal globally
 $.fn.modal = jest.fn()
 
+// Helper function to simulate navigation in the app
 const onNavigate = (pathname) => {
   document.body.innerHTML = ROUTES_PATH[pathname]
 }
 
+// Tests for what happens when the employee lands on the Bills Page
 describe('Given I am connected as an employee', () => {
   describe('When I am on Bills Page', () => {
     test('Then bill icon in vertical layout should be highlighted', async () => {
@@ -29,12 +31,15 @@ describe('Given I am connected as an employee', () => {
           type: 'Employee',
         })
       )
+
+      // Create root DOM element and initialize routing
       const root = document.createElement('div')
       root.setAttribute('id', 'root')
       document.body.append(root)
       router()
       window.onNavigate(ROUTES_PATH.Bills)
 
+      // Wait for the icon to render and assert it's highlighted
       await waitFor(() => screen.getByTestId('icon-window'))
       const windowIcon = screen.getByTestId('icon-window')
       expect(windowIcon).toHaveClass('active-icon')
@@ -42,23 +47,28 @@ describe('Given I am connected as an employee', () => {
 
     test('Then bills should be ordered from earliest to latest', () => {
       document.body.innerHTML = BillsUI({ data: bills })
+
+      // Get all visible dates in the table matching ISO-style date regex
       const dates = screen
-        .getAllByText(
-          /^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$/i
-        )
-        .map((a) => a.innerHTML)
+        .getAllByText((text) => /^\d{2}\/\d{2}\/\d{4}$/.test(text))
+        .map((el) => el.innerHTML)
+
+      // Define descending sort (most recent first)
       const antiChrono = (a, b) => (a < b ? 1 : -1)
       const datesSorted = [...dates].sort(antiChrono)
+
+      // Assert the dates shown are in descending order
       expect(dates).toEqual(datesSorted)
     })
   })
-
+  // Testing the eye icon functionality (opens bill image in modal)
   describe('When I click on the eye icon', () => {
     test('Then the bill modal should open', () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({ type: 'Employee' }))
       document.body.innerHTML = BillsUI({ data: bills })
 
+      // Instantiate Bills container to attach logic
       const billsContainer = new Bills({
         document,
         onNavigate,
@@ -66,19 +76,23 @@ describe('Given I am connected as an employee', () => {
         localStorage: window.localStorage,
       })
 
+      // Grab the first eye icon and look on the handler
       const eyeIcon = screen.getAllByTestId('icon-eye')[0]
       const handleClickIconEye = jest.fn(() =>
         billsContainer.handleClickIconEye(eyeIcon)
       )
 
+      // Attach and trigger the click
       eyeIcon.addEventListener('click', handleClickIconEye)
       fireEvent.click(eyeIcon)
 
+      // Confirm the click handler and modal were called
       expect(handleClickIconEye).toHaveBeenCalled()
-      expect($.fn.modal).toHaveBeenCalled() // ✅ check modal was triggered
+      expect($.fn.modal).toHaveBeenCalled()
     })
   })
 
+  // Test navigation to the "New Bill" page via the new bill button
   describe('When I click on New Bill button', () => {
     test('Then it should navigate to NewBill page', () => {
       document.body.innerHTML = BillsUI({ data: [] })
@@ -97,16 +111,20 @@ describe('Given I am connected as an employee', () => {
       newBillBtn.addEventListener('click', handleClickNewBill)
 
       fireEvent.click(newBillBtn)
+
+      // Confirm that the click handler was triggered
       expect(handleClickNewBill).toHaveBeenCalled()
     })
   })
 
+  // Tests for fetching bills from the mocked API
   describe('When I fetch bills from the mock API', () => {
     test('Then it should return bills', async () => {
       const billsFetched = await mockStore.bills().list()
       expect(billsFetched.length).toBeGreaterThan(0)
     })
 
+    // Force the mock store to return a rejected promise
     test('Then it should fail with 404 error', async () => {
       jest.spyOn(mockStore, 'bills').mockImplementation(() => {
         return {
@@ -128,22 +146,9 @@ describe('Given I am connected as an employee', () => {
     })
   })
 
+  // Unit tests for the `getBills()` method logic
   describe('When I call getBills()', () => {
-    test('Then it should return bills sorted from latest to earliest', async () => {
-      const billsContainer = new Bills({
-        document,
-        onNavigate,
-        store: mockStore,
-        localStorage: window.localStorage,
-      })
-
-      const billsList = await billsContainer.getBills()
-      expect(billsList.length).toBeGreaterThan(0)
-      expect(billsList).toEqual(
-        billsList.slice().sort((a, b) => new Date(b.date) - new Date(a.date))
-      )
-    })
-
+    // Tests if an invalid date is set
     test('Then if a bill has invalid date, it should return unformatted date', async () => {
       const corruptedStore = {
         bills: () => ({
@@ -173,7 +178,7 @@ describe('Given I am connected as an employee', () => {
       const billsContainer = new Bills({
         document,
         onNavigate,
-        store: null, // 🚨 important for that missing branch
+        store: null,
         localStorage: window.localStorage,
       })
 

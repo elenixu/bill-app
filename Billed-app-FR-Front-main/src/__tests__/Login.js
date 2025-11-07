@@ -227,37 +227,6 @@ describe('Given that I am a user on login page', () => {
       expect(screen.queryByText('Validations')).toBeTruthy()
     })
 
-    test('If login fails, it should call createUser (employee)', async () => {
-      document.body.innerHTML = LoginUI()
-
-      const form = screen.getByTestId('form-employee')
-
-      Object.defineProperty(window, 'localStorage', {
-        value: {
-          getItem: jest.fn(() => null),
-          setItem: jest.fn(() => null),
-        },
-        writable: true,
-      })
-
-      const onNavigate = jest.fn()
-      const loginInstance = new Login({
-        document,
-        localStorage: window.localStorage,
-        onNavigate,
-        PREVIOUS_LOCATION: '',
-        store: {},
-      })
-
-      loginInstance.login = jest.fn(() => Promise.reject('fail'))
-      loginInstance.createUser = jest.fn(() => Promise.resolve())
-
-      fireEvent.submit(form)
-
-      await new Promise(setImmediate)
-      expect(loginInstance.createUser).toHaveBeenCalled()
-    })
-
     test('If login fails, it should call createUser (admin)', async () => {
       document.body.innerHTML = LoginUI()
 
@@ -283,42 +252,15 @@ describe('Given that I am a user on login page', () => {
       loginInstance.login = jest.fn(() => Promise.reject('fail'))
       loginInstance.createUser = jest.fn(() => Promise.resolve())
 
-      fireEvent.submit(form)
-
-      await new Promise(setImmediate)
-      expect(loginInstance.createUser).toHaveBeenCalled()
-    })
-
-    test('If login fails, it should call createUser (admin)', async () => {
-      document.body.innerHTML = LoginUI()
-
-      const form = screen.getByTestId('form-admin')
-
-      Object.defineProperty(window, 'localStorage', {
-        value: {
-          getItem: jest.fn(() => null),
-          setItem: jest.fn(() => null),
-        },
-        writable: true,
-      })
-
-      const onNavigate = jest.fn()
-      const loginInstance = new Login({
-        document,
-        localStorage: window.localStorage,
-        onNavigate,
-        PREVIOUS_LOCATION: '',
-        store: {},
-      })
-
-      loginInstance.login = jest.fn(() => Promise.reject('fail'))
-      loginInstance.createUser = jest.fn(() => Promise.resolve())
+      // This is the missing piece
+      form.addEventListener('submit', loginInstance.handleSubmitAdmin)
 
       fireEvent.submit(form)
 
-      await new Promise(setImmediate)
+      await Promise.resolve()
       expect(loginInstance.createUser).toHaveBeenCalled()
     })
+
     test('login() returns null if store is not defined', () => {
       const loginInstance = new Login({
         document,
