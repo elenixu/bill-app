@@ -227,6 +227,7 @@ describe('Given that I am a user on login page', () => {
       expect(screen.queryByText('Validations')).toBeTruthy()
     })
 
+    // Added test (simulates a failed login attempt for an admin, and checks that createUser() is called afterward)
     test('If login fails, it should call createUser (admin)', async () => {
       document.body.innerHTML = LoginUI()
 
@@ -252,7 +253,6 @@ describe('Given that I am a user on login page', () => {
       loginInstance.login = jest.fn(() => Promise.reject('fail'))
       loginInstance.createUser = jest.fn(() => Promise.resolve())
 
-      // This is the missing piece
       form.addEventListener('submit', loginInstance.handleSubmitAdmin)
 
       fireEvent.submit(form)
@@ -261,6 +261,7 @@ describe('Given that I am a user on login page', () => {
       expect(loginInstance.createUser).toHaveBeenCalled()
     })
 
+    // Added test (verifying code doesn’t crash if store is null)
     test('login() returns null if store is not defined', () => {
       const loginInstance = new Login({
         document,
@@ -274,13 +275,14 @@ describe('Given that I am a user on login page', () => {
       expect(result).toBeNull()
     })
 
+    // Added test (ensure createUser() safely returns null when store is not provided)
     test('createUser() returns null if store is not defined', () => {
       const loginInstance = new Login({
         document,
         localStorage: window.localStorage,
         onNavigate: jest.fn(),
         PREVIOUS_LOCATION: '',
-        store: null, // ← this forces the else branch
+        store: null,
       })
 
       const result = loginInstance.createUser({
